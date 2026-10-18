@@ -174,6 +174,8 @@ export const TRANSLATIONS = {
   "Chain": { "zh-Hans": "链", "zh-Hant": "鏈", "fa": "زنجیره", "ru": "Цепочка" },
   "Process": { "zh-Hans": "进程", "zh-Hant": "進程", "fa": "فرایند", "ru": "Процесс" },
   "Close connection": { "zh-Hans": "关闭连接", "zh-Hant": "關閉連接", "fa": "بستن اتصال", "ru": "Закрыть подключение" },
+  "Pause refreshing": { "zh-Hans": "暂停刷新", "zh-Hant": "暫停重新整理", "fa": "توقف به‌روزرسانی", "ru": "Приостановить обновление" },
+  "Resume refreshing": { "zh-Hans": "继续刷新", "zh-Hant": "繼續重新整理", "fa": "ادامه به‌روزرسانی", "ru": "Возобновить обновление" },
 
   "Error": { "zh-Hans": "错误", "zh-Hant": "錯誤", "fa": "خطا", "ru": "Ошибка" },
   "Default": { "zh-Hans": "默认", "zh-Hant": "默認", "fa": "پیش‌فرض", "ru": "По умолчанию" },

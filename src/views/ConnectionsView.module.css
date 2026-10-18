@@ -53,8 +53,11 @@
 }
 
 .connection-row .columns .right {
+  min-width: 0;
+  max-width: 100%;
   margin-inline-start: auto;
   text-align: end;
+  overflow-wrap: anywhere;
 }
 
 [dir="rtl"] .connection-row {

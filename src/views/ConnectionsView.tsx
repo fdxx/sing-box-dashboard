@@ -1,7 +1,7 @@
 import { Code } from "@connectrpc/connect";
 import { memo, useMemo, useState } from "react";
 
-import type { ConnectionRow } from "../api/daemon";
+import type { ConnectionRow, ConnectionsData } from "../api/daemon";
 import { formatBytes, formatClockTime, formatDateTime, formatDurationMs } from "../api/format";
 import { useStream } from "../api/stream";
 import {
@@ -18,7 +18,7 @@ import { useI18n, type MessageKey } from "../app/i18n";
 import { Icon } from "../components/Icon";
 import { PageHeader } from "../components/PageHeader";
 import { StreamStates } from "../components/StreamBanner";
-import { Badge, Button, DataLine, DetailSection, DetailShell, MenuItem, MenuLabel, OthersMenu, SearchInput } from "../components/ui";
+import { Badge, Button, DataLine, DetailSection, DetailShell, IconButton, MenuItem, MenuLabel, OthersMenu, SearchInput } from "../components/ui";
 import styles from "./ConnectionsView.module.css";
 
 const STATE_OPTIONS: { value: ConnectionStateFilter; label: MessageKey }[] = [
@@ -48,10 +48,13 @@ export function ConnectionsView() {
   const [sortMode, setSortMode] = useState<ConnectionSortMode>(loadConnectionSortMode);
   const [search, setSearch] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [frozen, setFrozen] = useState<ConnectionsData | null>(null);
+  const paused = frozen !== null;
+  const sourceData = frozen ?? connections.data;
 
   const rows = useMemo(() => {
     const result: ConnectionRow[] = [];
-    for (const row of connections.data.rows.values()) {
+    for (const row of sourceData.rows.values()) {
       if (stateFilter === "active" && row.closedAt !== null) {
         continue;
       }
@@ -89,9 +92,9 @@ export function ConnectionsView() {
       return rightCreated - leftCreated;
     });
     return result;
-  }, [connections.data.rows, stateFilter, sortMode, search]);
+  }, [sourceData.rows, stateFilter, sortMode, search]);
 
-  const detailRow = detailId !== null ? (connections.data.rows.get(detailId) ?? null) : null;
+  const detailRow = detailId !== null ? (sourceData.rows.get(detailId) ?? null) : null;
   const detailActive = detailRow?.closedAt === null;
   const detail = detailRow && (
     <DetailShell
@@ -117,45 +120,56 @@ export function ConnectionsView() {
       <PageHeader
         title={t("Connections")}
         actions={
-          <OthersMenu>
-            <MenuLabel>{t("State")}</MenuLabel>
-            {STATE_OPTIONS.map((option) => (
-              <MenuItem
-                key={option.value}
-                checked={stateFilter === option.value}
-                onSelect={() => {
-                  setStateFilter(option.value);
-                  saveConnectionStateFilter(option.value);
-                }}
-              >
-                {t(option.label)}
-              </MenuItem>
-            ))}
-            <div className="menu-divider" />
-            <MenuLabel>{t("Sort By")}</MenuLabel>
-            {SORT_OPTIONS.map((option) => (
-              <MenuItem
-                key={option.value}
-                checked={sortMode === option.value}
-                onSelect={() => {
-                  setSortMode(option.value);
-                  saveConnectionSortMode(option.value);
-                }}
-              >
-                {t(option.label)}
-              </MenuItem>
-            ))}
-            <div className="menu-divider" />
-            <MenuItem
-              danger
-              icon="close"
-              onSelect={() => {
-                void api.closeAllConnections().catch(showError);
-              }}
+          <>
+            <IconButton
+              active={paused}
+              aria-pressed={paused}
+              aria-label={paused ? t("Resume refreshing") : t("Pause refreshing")}
+              title={paused ? t("Resume refreshing") : t("Pause refreshing")}
+              onClick={() => setFrozen(paused ? null : connections.data)}
             >
-              {t("Close All Connections")}
-            </MenuItem>
-          </OthersMenu>
+              <Icon name={paused ? "play_arrow" : "pause"} />
+            </IconButton>
+            <OthersMenu>
+              <MenuLabel>{t("State")}</MenuLabel>
+              {STATE_OPTIONS.map((option) => (
+                <MenuItem
+                  key={option.value}
+                  checked={stateFilter === option.value}
+                  onSelect={() => {
+                    setStateFilter(option.value);
+                    saveConnectionStateFilter(option.value);
+                  }}
+                >
+                  {t(option.label)}
+                </MenuItem>
+              ))}
+              <div className="menu-divider" />
+              <MenuLabel>{t("Sort By")}</MenuLabel>
+              {SORT_OPTIONS.map((option) => (
+                <MenuItem
+                  key={option.value}
+                  checked={sortMode === option.value}
+                  onSelect={() => {
+                    setSortMode(option.value);
+                    saveConnectionSortMode(option.value);
+                  }}
+                >
+                  {t(option.label)}
+                </MenuItem>
+              ))}
+              <div className="menu-divider" />
+              <MenuItem
+                danger
+                icon="close"
+                onSelect={() => {
+                  void api.closeAllConnections().catch(showError);
+                }}
+              >
+                {t("Close All Connections")}
+              </MenuItem>
+            </OthersMenu>
+          </>
         }
       />
       <div className="field">
@@ -163,7 +177,7 @@ export function ConnectionsView() {
       </div>
       <StreamStates
         snapshot={connections}
-        loaded={connections.data.loaded}
+        loaded={sourceData.loaded}
         empty={rows.length === 0}
         emptyIcon="swap_vert"
         emptyMessage={t(search.trim() !== "" ? "No matching connections" : EMPTY_MESSAGES[stateFilter])}
@@ -286,7 +300,7 @@ const ConnectionRowView = memo(function ConnectionRowView(props: {
           <span>
             {connection.inboundType}/{connection.inbound}
           </span>
-          <span>{active ? (chain[0] ?? connection.outbound) : chain.join(" / ")}</span>
+          <span>{chain.length > 0 ? chain.join(" / ") : connection.outbound}</span>
         </div>
       </div>
     </button>

@@ -13,6 +13,7 @@ import { Badge, Card, IconButton, MenuItem, Spinner, useContextMenu } from "../c
 import type { Group, GroupItem } from "../gen/daemon/started_service_pb";
 import styles from "./GroupsView.module.css";
 import { cx } from "../lib/cx";
+import { loadStoredJson, saveStoredJson } from "../lib/storage";
 
 export function GroupsView() {
   const api = useApi();
@@ -41,13 +42,20 @@ function GroupCard(props: { group: Group }) {
   const { t } = useI18n();
   const group = props.group;
   const [testing, setTesting] = useState(false);
-  const [expanded, setExpandOverride] = usePendingValue(group.isExpand);
+  const expandKey = `group-expand:${group.tag}`;
+  const [expandOverride, setExpandOverride] = useState(() => {
+    const stored = loadStoredJson(expandKey);
+    return typeof stored === "boolean" ? stored : null;
+  });
+  const expanded = expandOverride ?? group.isExpand;
   const [selected, setPendingSelection] = usePendingValue(group.selected);
 
   const toggleExpand = () => {
     const next = !expanded;
     setExpandOverride(next);
-    api.setGroupExpand(group.tag, next).catch(() => setExpandOverride(null));
+    saveStoredJson(expandKey, next);
+    // Keep the local preference even if the daemon cannot persist it.
+    api.setGroupExpand(group.tag, next).catch(() => {});
   };
 
   const runURLTest = () => {
